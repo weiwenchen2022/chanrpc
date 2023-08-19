@@ -103,6 +103,10 @@ func (client *Client) send(call *Call) {
 	}
 }
 
+// Precompute the reflect type for any. Can't use any directly
+// because Typeof takes an empty interface value. This is annoying.
+var typeOfAny = reflect.TypeOf(new(any)).Elem()
+
 func (client *Client) input() {
 	var (
 		err      error
@@ -134,7 +138,12 @@ func (client *Client) input() {
 						err = fmt.Errorf("%v", r)
 					}
 				}()
-				replyv := reflect.ValueOf(response.Reply).Elem()
+
+				replyv := reflect.ValueOf(response.Reply)
+				if typeOfAny != reflect.TypeOf(call.Reply).Elem() {
+					replyv = replyv.Elem()
+				}
+
 				reflect.ValueOf(call.Reply).Elem().Set(replyv)
 				return nil
 			}()

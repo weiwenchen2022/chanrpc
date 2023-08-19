@@ -7,6 +7,8 @@ import (
 
 	"github.com/weiwenchen2022/chanrpc"
 	"github.com/weiwenchen2022/chanrpc/chanpipe"
+
+	pb "github.com/weiwenchen2022/chanrpc/helloworld"
 )
 
 type Args struct {
@@ -63,4 +65,34 @@ func Example() {
 	// Output:
 	// Arith: 7 * 8 = 56
 	// Arith: 7 / 8 = 0, 7
+}
+
+type Greeter struct{}
+
+func (*Greeter) SayHello(in *pb.HelloRequest, reply *pb.HelloReply) error {
+	log.Printf("Received: %s", in.GetName())
+	*reply = pb.HelloReply{Message: "Hello " + in.GetName()}
+	return nil
+}
+
+func Example_helloworld() {
+	s := chanrpc.NewServer()
+	s.Register(&Greeter{})
+
+	c1, c2 := chanpipe.Pipe()
+	go s.ServeChan(c2)
+
+	c := chanrpc.NewClient(c1)
+
+	var reply any
+	err := c.Call("Greeter.SayHello", &pb.HelloRequest{Name: "world"}, &reply)
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+
+	// reply := r.(pb.HelloReply)
+	fmt.Printf("Greeting: %s", reply.(*pb.HelloReply).GetMessage())
+
+	// Output:
+	// Greeting: Hello world
 }
